@@ -1,0 +1,28 @@
+{
+    "milk": ["milk", "lactose", "whey", "casein", "butterfat", "cheese"],
+    "egg": ["egg", "albumin", "ovalbumin", "egg white", "egg yolk"],
+    "peanut": ["peanut", "groundnut", "arachis oil"],
+    "tree_nut": ["almond", "walnut", "cashew", "hazelnut", "pecan", "pistachio"],
+    "gluten": ["wheat", "barley", "rye", "malt", "triticale"],
+    "soy": ["soy", "soya", "soybean", "tofu", "edamame"],
+    "fish": ["fish", "anchovy", "salmon", "tuna", "cod", "haddock"],
+    "shellfish": ["shrimp", "prawn", "crab", "lobster", "scallop"],
+    "sesame": ["sesame", "tahini", "sesame seed", "sesame oil"],
+    "mustard": ["mustard", "mustard flour", "mustard seed"],
+    "celery": ["celery", "celeriac"],
+    "sulphite": ["sulphite", "sulfite", "E220", "E221", "E222", "E223", "E224", "E226"],
+
+    "lactose_intolerant": ["lactose", "milk powder", "whey"],
+    "gluten_intolerant": ["wheat", "barley", "rye", "malt"],
+    "fructose_intolerant": ["fructose", "high fructose corn syrup", "honey"],
+    "histamine_intolerant": ["fermented", "aged cheese", "wine", "beer", "smoked"],
+    "sugar_intolerant": ["sucrose", "glucose", "fructose", "corn syrup", "dextrose"],
+    "maida_intolerant": ["refined flour", "maida", "white flour"],
+
+    "vegan": ["egg", "milk", "butter", "cheese", "gelatin", "honey"],
+    "vegetarian": ["gelatin", "fish", "meat", "chicken", "beef"],
+    "keto": ["sugar", "maida", "rice", "potato", "corn"],
+    "diabetic_friendly": ["sugar", "sucrose", "glucose", "fructose"],
+    "low_sodium": ["salt", "sodium", "monosodium glutamate", "msg"],
+    "heart_safe": ["trans fat", "hydrogenated oil", "palm oil", "cholesterol"]
+}

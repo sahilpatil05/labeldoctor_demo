@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LabelDoctor - Ingredient Scanner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .auth-box {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+        .auth-box h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+        .btn-auth {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        .btn-auth:hover {
+            background: #764ba2;
+        }
+        .auth-toggle {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+        }
+        .auth-toggle a {
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .error-message {
+            color: #dc3545;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+        .success-message {
+            color: #28a745;
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+        .hidden-form {
+            display: none;
+        }
+    </style>
+    <!-- Chart.js Library for Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+</head>
+<body>
+    <!-- Auth Container (shown on page load) -->
+    <div id="authContainer" class="auth-container">
+        <!-- Login Form -->
+        <div id="loginForm" class="auth-box">
+            <h2><i class="fas fa-heart"></i> LabelDoctor Login</h2>
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" required placeholder="your@email.com">
+                    <div class="error-message" id="loginEmailError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" required placeholder="Enter your password">
+                    <div class="error-message" id="loginPasswordError"></div>
+                </div>
+                <button type="submit" class="btn-auth">Login</button>
+                <div class="success-message" id="loginSuccess"></div>
+                <div class="error-message" id="loginError"></div>
+            </form>
+            <div class="auth-toggle">
+                Don't have an account? <a onclick="toggleAuth()">Sign up</a>
+            </div>
+        </div>
+
+        <!-- Register Form -->
+        <div id="registerForm" class="auth-box hidden-form">
+            <h2><i class="fas fa-heart"></i> LabelDoctor Sign Up</h2>
+            <form onsubmit="handleRegister(event)">
+                <div class="form-group">
+                    <label for="registerName">Full Name</label>
+                    <input type="text" id="registerName" required placeholder="Your name">
+                    <div class="error-message" id="registerNameError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">Email</label>
+                    <input type="email" id="registerEmail" required placeholder="your@email.com">
+                    <div class="error-message" id="registerEmailError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">Password</label>
+                    <input type="password" id="registerPassword" required placeholder="At least 6 characters">
+                    <div class="error-message" id="registerPasswordError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="registerConfirmPassword">Confirm Password</label>
+                    <input type="password" id="registerConfirmPassword" required placeholder="Confirm password">
+                    <div class="error-message" id="registerConfirmPasswordError"></div>
+                </div>
+                <button type="submit" class="btn-auth">Sign Up</button>
+                <div class="success-message" id="registerSuccess"></div>
+                <div class="error-message" id="registerError"></div>
+            </form>
+            <div class="auth-toggle">
+                Already have an account? <a onclick="toggleAuth()">Log in</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until logged in) -->
+    <div id="mainApp" style="display: none;">
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-heart"></i>
+                <span>LabelDoctor</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#home" class="nav-link active">Home</a></li>
+                <li><a href="#scanner" class="nav-link">Scanner</a></li>
+                <li><a href="#about" class="nav-link">About</a></li>
+                <li><button class="btn-primary" onclick="openProfile()">Profile</button></li>
+                <li><button class="btn-secondary" onclick="handleLogout()" style="margin-left: 10px;">Logout</button></li>
+            </ul>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>Scan Your Food Labels</h1>
+                <p>Instantly detect allergens and get healthy alternatives</p>
+                <button class="btn-large" onclick="scrollToScanner()">
+                    <i class="fas fa-camera"></i> Start Scanning
+                </button>
+            </div>
+            <div class="hero-image">
+                <div class="floating-card">
+                    <i class="fas fa-leaf"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Food Ingredients & Allergens Facts Section -->
+    <section class="features">
+        <div class="container">
+            <h2>Food Ingredients & Allergens Facts</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: #F59E0B;">
+                        <i class="fas fa-milk"></i>
+                    </div>
+                    <h3>Top Allergens</h3>
+                    <p>The 8 major food allergens (milk, eggs, peanuts, tree nuts, fish, shellfish, soy, wheat) account for 90% of food allergies. Always check labels carefully.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: #EF4444;">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                    <h3>Hidden Ingredients</h3>
+                    <p>Allergens can be hidden under ingredient aliases. For example, "lactose," "whey," and "casein" all come from milk products.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: #10B981;">
+                        <i class="fas fa-leaf"></i>
+                    </div>
+                    <h3>Reading Food Labels</h3>
+                    <p>Check ingredient lists and allergen declarations. Look for "Contains: Milk, Eggs" statements or "May contain" warnings for cross-contamination risks.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: #8B5CF6;">
+                        <i class="fas fa-info-circle"></i>
+                    </div>
+                    <h3>Additives & Preservatives</h3>
+                    <p>Common additives like sulfites, MSG, and certain food dyes can trigger reactions in sensitive individuals. Learn what to avoid based on your needs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scanner Section -->
+    <section id="scanner" class="scanner-section">
+        <div class="container">
+            <h2>Ingredient Scanner</h2>
+            
+            <!-- Food Category Selector -->
+            <div class="category-selector" style="margin-bottom: 30px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+                <label for="foodCategory" style="display: block; margin-bottom: 10px; font-weight: 600; color: #333;">
+                    <i class="fas fa-list"></i> Food Category (Optional)
+                </label>
+                <select id="foodCategory" style="width: 100%; max-width: 400px; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 16px; cursor: pointer;">
+                    <option value="">Select a category...</option>
+                </select>
+                <p style="margin-top: 8px; font-size: 14px; color: #666;">Selecting a category helps us recommend healthier alternatives in the same category</p>
+            </div>
+            
+            <div class="scanner-container">
+                <!-- Left: Upload Area & Camera -->
+                <div class="upload-area">
+                    <!-- Tab Navigation -->
+                    <div class="scanner-tabs">
+                        <button class="tab-btn active" onclick="switchScannerTab('upload')">
+                            <i class="fas fa-image"></i> Upload
+                        </button>
+                        <button class="tab-btn" onclick="switchScannerTab('camera')">
+                            <i class="fas fa-camera"></i> Camera
+                        </button>
+                    </div>
+
+                    <!-- Upload Tab -->
+                    <div id="uploadTab" class="tab-content active">
+                        <div class="drag-drop-zone" id="dragDropZone">
+                            <i class="fas fa-image"></i>
+                            <h3>Upload Food Label</h3>
+                            <p>Drag and drop an image or click to browse</p>
+                            <input type="file" id="imageInput" accept="image/*" hidden>
+                        </div>
+                    </div>
+
+                    <!-- Camera Tab -->
+                    <div id="cameraTab" class="tab-content">
+                        <div class="camera-container">
+                            <div id="cameraPreview" class="camera-preview">
+                                <video 
+                                    id="videoStream" 
+                                    autoplay 
+                                    playsinline 
+                                    muted
+                                    webkit-playsinline
+                                    disablePictureInPicture
+                                    style="width: 100%; height: 100%; object-fit: cover; background-color: #000;">
+                                </video>
+                                <div class="camera-overlay">
+                                    <div class="focus-box"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="camera-controls">
+                                <button class="btn-secondary" id="startCameraBtn" onclick="startCamera()">
+                                    <i class="fas fa-play"></i> Start Camera
+                                </button>
+                                <button class="btn-primary hidden" id="captureCameraBtn" onclick="captureFromCamera()">
+                                    <i class="fas fa-camera-retro"></i> Capture
+                                </button>
+                                <button class="btn-secondary hidden" id="stopCameraBtn" onclick="stopCamera()">
+                                    <i class="fas fa-stop"></i> Stop
+                                </button>
+                            </div>
+
+                            <div id="cameraError" class="camera-error hidden">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <p id="cameraErrorMsg">Unable to access camera</p>
+                            </div>
+
+                            <div id="cameraCaptureLoading" class="loading hidden">
+                                <div class="spinner"></div>
+                                <p>Capturing image...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview Container (for both upload and camera) -->
+                    <div id="previewContainer" class="preview-container hidden">
+                        <img id="previewImage" src="" alt="Preview">
+                        <div class="preview-actions">
+                            <button class="btn-secondary" onclick="clearImage()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                            <button class="btn-primary" onclick="scanImage()">
+                                <i class="fas fa-search"></i> Scan
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="loadingSpinner" class="loading hidden">
+                        <div class="spinner"></div>
+                        <p>Scanning image...</p>
+                    </div>
+                </div>
+
+                <!-- Right: Extracted Text -->
+                <div class="extracted-text-area">
+                    <h3>Extracted Ingredients</h3>
+                    <div id="extractedText" class="extracted-content">
+                        <p class="placeholder">Image will appear here after scanning</p>
+                    </div>
+                    
+                    <div class="manual-input">
+                        <p>Or manually enter ingredients:</p>
+                        <textarea id="manualIngredients" placeholder="Enter ingredients separated by commas&#10;e.g., wheat, milk, eggs, sugar"></textarea>
+                        <button class="btn-primary full-width" onclick="analyzeManualIngredients()">
+                            <i class="fas fa-check"></i> Analyze
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="results" class="results-section hidden">
+        <div class="container">
+            <h2>Analysis Results</h2>
+            
+            <div class="results-grid">
+                <!-- Health Score -->
+                <div class="results-card health-score-card">
+                    <h3>Health Score</h3>
+                    <div class="score-circle" id="scoreCircle">
+                        <span id="scoreValue">--</span>%
+                    </div>
+                    <p class="score-label" id="scoreLabel">-</p>
+                </div>
+
+                <!-- Stats -->
+                <div class="results-card stats-card">
+                    <h3>Statistics</h3>
+                    <div class="stat-item">
+                        <span><i class="fas fa-list"></i> Total Ingredients:</span>
+                        <strong id="totalIngredients">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span><i class="fas fa-check-circle"></i> Safe:</span>
+                        <strong id="safeCount">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span><i class="fas fa-warning"></i> Warnings:</span>
+                        <strong id="warningCount">0</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualizations Section -->
+            <div style="margin-top: 40px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+                <h3 style="text-align: center; margin-top: 0;">
+                    <i class="fas fa-chart-line"></i> Ingredient Analysis Visualizations
+                </h3>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                    <!-- Ingredient Safety Breakdown -->
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h4 style="text-align: center; margin-top: 0;">Ingredient Safety Breakdown</h4>
+                        <canvas id="safetyChart" height="200"></canvas>
+                    </div>
+
+                    <!-- Allergen Distribution -->
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h4 style="text-align: center; margin-top: 0;">Top Allergens Detected</h4>
+                        <canvas id="allergenChart" height="200"></canvas>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 30px;">
+                    <!-- Health Score Comparison -->
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h4 style="text-align: center; margin-top: 0;">Your Score vs Recommendations</h4>
+                        <canvas id="healthScoreChart" height="150"></canvas>
+                    </div>
+
+                    <!-- Ingredient Insights -->
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <h4 style="text-align: center; margin-top: 0;">Ingredient Risk Breakdown</h4>
+                        <canvas id="riskChart" height="150"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Warnings Section -->
+            <div id="warningsContainer" class="warnings-container hidden">
+                <h3><i class="fas fa-exclamation-circle"></i> Allergen Warnings</h3>
+                <div id="warningsList" class="warnings-list"></div>
+            </div>
+
+            <!-- Safe Ingredients -->
+            <div id="safeContainer" class="safe-container hidden">
+                <h3><i class="fas fa-check"></i> Safe Ingredients</h3>
+                <div id="safeIngredientsList" class="ingredients-list"></div>
+            </div>
+
+            <!-- Alternatives -->
+            <div id="alternativesContainer" class="alternatives-container hidden">
+                <h3><i class="fas fa-lightbulb"></i> Recommended Alternatives</h3>
+                <div id="alternativesList" class="alternatives-list"></div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn-secondary" onclick="goBackToScanner()">
+                    <i class="fas fa-arrow-left"></i> Scan Another
+                </button>
+                <button class="btn-primary" onclick="saveResults()">
+                    <i class="fas fa-save"></i> Save Results
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <h2>About LabelDoctor</h2>
+            <div class="about-content">
+                <p>LabelDoctor is an intelligent food label scanner that uses cutting-edge OCR technology to help you make better dietary choices. Whether you have allergies, dietary restrictions, or simply want to eat healthier, we've got you covered.</p>
+                
+                <div class="icons-row">
+                    <div class="about-icon">
+                        <i class="fas fa-brain"></i>
+                        <h4>AI-Powered</h4>
+                        <p>Advanced OCR and machine learning</p>
+                    </div>
+                    <div class="about-icon">
+                        <i class="fas fa-database"></i>
+                        <h4>Extensive Database</h4>
+                        <p>Comprehensive allergen information</p>
+                    </div>
+                    <div class="about-icon">
+                        <i class="fas fa-lock"></i>
+                        <h4>Your Privacy</h4>
+                        <p>Secure and private scanning</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>My Profile</h2>
+                <button class="close-btn" onclick="closeProfile()">&times;</button>
+            </div>
+            
+            <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+                <!-- User Info Section -->
+                <div class="profile-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: white;">
+                        <i class="fas fa-user"></i> My Information
+                    </h3>
+                    <div style="margin: 15px 0;">
+                        <p style="margin: 8px 0;"><strong>Name:</strong> <span id="profileName">-</span></p>
+                        <p style="margin: 8px 0;"><strong>Email:</strong> <span id="profileEmail">-</span></p>
+                    </div>
+                </div>
+
+                <!-- Stats Section -->
+                <div class="profile-section" style="background: #f5f5f5; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0;">
+                        <i class="fas fa-chart-bar"></i> My Statistics
+                    </h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
+                            <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="totalScansCount">0</div>
+                            <p style="margin: 5px 0; color: #666; font-size: 14px;">Total Scans</p>
+                        </div>
+                        <div style="text-align: center; padding: 15px; background: white; border-radius: 8px;">
+                            <div style="font-size: 28px; font-weight: bold; color: #10B981;" id="avgHealthScoreCount">0</div>
+                            <p style="margin: 5px 0; color: #666; font-size: 14px;">Average Health Score</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scan History -->
+                <div class="profile-section">
+                    <h3>
+                        <i class="fas fa-history"></i> Recent Scans
+                    </h3>
+                    <div id="scanHistoryList" style="max-height: 250px; overflow-y: auto;">
+                        <p style="color: #999; text-align: center;">No scans yet</p>
+                    </div>
+                </div>
+
+                <!-- Allergens Section -->
+                <div class="profile-section">
+                    <h3>
+                        <i class="fas fa-warning"></i> My Allergens
+                    </h3>
+                    <div class="allergen-selector" id="allergenSelector"></div>
+                    <small>Select all allergens that apply to you</small>
+                </div>
+
+                <!-- Dietary Preferences Section -->
+                <div class="profile-section">
+                    <h3>
+                        <i class="fas fa-leaf"></i> Dietary Preferences
+                    </h3>
+                    <div class="preferences-list">
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="vegan">
+                            <span>Vegan</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="vegetarian">
+                            <span>Vegetarian</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="glutenfree">
+                            <span>Gluten Free</span>
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" id="dairyfree">
+                            <span>Dairy Free</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeProfile()">Close</button>
+                <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 LabelDoctor. All rights reserved.</p>
+            <p>Made with <i class="fas fa-heart"></i> for your health</p>
+        </div>
+    </footer>
+    </div><!-- End of mainApp -->
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{
+  "milk": {
+    "alternatives": ["Almond milk", "Oat milk", "Soy milk", "Coconut milk", "Rice milk"],
+    "note": "Plant-based milks provide similar creaminess and are rich in calcium and vitamin B12 if fortified.",
+    "brands": [
+      {"name": "Almond Breeze", "company": "Blue Diamond", "type": "Almond Milk"},
+      {"name": "Oatly", "company": "Oatly AB", "type": "Oat Milk"},
+      {"name": "Silk Soy Milk", "company": "Danone", "type": "Soy Milk"},
+      {"name": "CocoMama", "company": "CocoMama", "type": "Coconut Milk"}
+    ]
+  },
+  "egg": {
+    "alternatives": ["Flaxseed meal (1 tbsp + 3 tbsp water)", "Chia seeds (1 tbsp + 3 tbsp water)", "Applesauce", "Mashed banana"],
+    "note": "For baking, flax or chia eggs give structure while keeping recipes vegan-friendly.",
+    "brands": [
+      {"name": "Bob’s Red Mill Flaxseed Meal", "company": "Bob’s Red Mill", "type": "Flax Meal"},
+      {"name": "Chia Co Chia Seeds", "company": "The Chia Co", "type": "Chia Seeds"},
+      {"name": "24 Mantra Organic Applesauce", "company": "24 Mantra", "type": "Applesauce"}
+    ]
+  },
+  "gluten": {
+    "alternatives": ["Rice flour", "Almond flour", "Coconut flour", "Quinoa flour", "Cornmeal"],
+    "note": "These gluten-free flours work in baking and thickening sauces.",
+    "brands": [
+      {"name": "Bob’s Red Mill Gluten-Free Flour", "company": "Bob’s Red Mill", "type": "Flour"},
+      {"name": "Urban Platter Quinoa Flour", "company": "Urban Platter", "type": "Quinoa Flour"},
+      {"name": "Nutty Yogi Coconut Flour", "company": "Nutty Yogi", "type": "Coconut Flour"}
+    ]
+  },
+  "sugar_intolerant": {
+    "alternatives": ["Stevia", "Erythritol", "Monk fruit", "Date syrup (low GI)"],
+    "note": "Natural, low-glycemic sweeteners help control blood sugar levels.",
+    "brands": [
+      {"name": "Zevic Stevia", "company": "Zevic India", "type": "Stevia"},
+      {"name": "Sugar-Free Green", "company": "Zydus Wellness", "type": "Stevia Tablets"},
+      {"name": "Lakanto Monk Fruit Sweetener", "company": "Lakanto", "type": "Monk Fruit"}
+    ]
+  },
+  "maida_intolerant": {
+    "alternatives": ["Whole wheat flour", "Ragi flour", "Oats flour"],
+    "note": "Whole grains add fiber and maintain blood sugar stability.",
+    "brands": [
+      {"name": "Aashirvaad Whole Wheat Atta", "company": "ITC", "type": "Wheat Flour"},
+      {"name": "24 Mantra Organic Ragi Flour", "company": "24 Mantra", "type": "Ragi Flour"},
+      {"name": "Quaker Oats", "company": "PepsiCo", "type": "Oats Flour"}
+    ]
+  }
+}
