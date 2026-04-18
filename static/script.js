@@ -411,28 +411,35 @@ function startEditImage() {
     if (viewMode) viewMode.classList.add('hidden');
     if (cropMode) cropMode.classList.remove('hidden');
     
-    // Load image and draw to canvas
+    // Load image and draw to canvas at high resolution
     const img = new Image();
     img.onload = function() {
-        cropCanvas.width = img.width;
-        cropCanvas.height = img.height;
-        const ctx = cropCanvas.getContext('2d');
+        // Use 2x resolution for high quality cropping
+        const pixelRatio = 2;
+        cropCanvas.width = img.width * pixelRatio;
+        cropCanvas.height = img.height * pixelRatio;
+        const ctx = cropCanvas.getContext('2d', { alpha: false });
+        
+        // Enable high quality rendering
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         
         // Apply rotation if any
         if (cropState.rotation !== 0) {
-            ctx.translate(img.width / 2, img.height / 2);
+            ctx.translate((img.width * pixelRatio) / 2, (img.height * pixelRatio) / 2);
             ctx.rotate((cropState.rotation * Math.PI) / 180);
-            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            ctx.drawImage(img, -(img.width * pixelRatio) / 2, -(img.height * pixelRatio) / 2, img.width * pixelRatio, img.height * pixelRatio);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
         } else {
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, img.width * pixelRatio, img.height * pixelRatio);
         }
         
         // Initialize crop box (80% of image)
         cropState.cropBox = {
-            x: img.width * 0.1,
-            y: img.height * 0.1,
-            width: img.width * 0.8,
-            height: img.height * 0.8
+            x: (img.width * pixelRatio) * 0.1,
+            y: (img.height * pixelRatio) * 0.1,
+            width: (img.width * pixelRatio) * 0.8,
+            height: (img.height * pixelRatio) * 0.8
         };
         
         drawCropBox();
@@ -447,17 +454,20 @@ function drawCropBox() {
     const img = new Image();
     
     img.onload = function() {
-        const ctx = canvas.getContext('2d');
+        const pixelRatio = 2;
+        const ctx = canvas.getContext('2d', { alpha: false });
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Redraw image with rotation
+        // Redraw image with rotation at high resolution
         if (cropState.rotation !== 0) {
-            ctx.translate(img.width / 2, img.height / 2);
+            ctx.translate((img.width * pixelRatio) / 2, (img.height * pixelRatio) / 2);
             ctx.rotate((cropState.rotation * Math.PI) / 180);
-            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            ctx.drawImage(img, -(img.width * pixelRatio) / 2, -(img.height * pixelRatio) / 2, img.width * pixelRatio, img.height * pixelRatio);
             ctx.setTransform(1, 0, 0, 1, 0, 0);
         } else {
-            ctx.drawImage(img, 0, 0);
+            ctx.drawImage(img, 0, 0, img.width * pixelRatio, img.height * pixelRatio);
         }
         
         // Draw crop box
@@ -549,18 +559,29 @@ function applyCrop() {
     const previewImage = document.getElementById('previewImage');
     const { x, y, width, height } = cropState.cropBox;
     
-    // Create a temporary canvas for the cropped image
+    // Create a temporary canvas for the cropped image at high quality
+    const pixelRatio = 2; // High resolution
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = width;
-    tempCanvas.height = height;
-    const tempCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = width * pixelRatio;
+    tempCanvas.height = height * pixelRatio;
+    const tempCtx = tempCanvas.getContext('2d', { alpha: false });
     
-    // Get the image data from the main canvas
+    // Enable high-quality rendering
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.imageSmoothingQuality = 'high';
+    
+    // Draw the cropped region from the main canvas
     const imageData = canvas.getContext('2d').getImageData(x, y, width, height);
-    tempCtx.putImageData(imageData, 0, 0);
+    const scaledCanvas = document.createElement('canvas');
+    scaledCanvas.width = width;
+    scaledCanvas.height = height;
+    scaledCanvas.getContext('2d').putImageData(imageData, 0, 0);
     
-    // Update the preview image
-    previewImage.src = tempCanvas.toDataURL('image/jpeg', 0.95);
+    // Scale up the cropped image for high quality output
+    tempCtx.drawImage(scaledCanvas, 0, 0, width, height, 0, 0, width * pixelRatio, height * pixelRatio);
+    
+    // Update the preview image with high quality JPEG
+    previewImage.src = tempCanvas.toDataURL('image/jpeg', 0.98);
     state.currentImage = previewImage.src;
     
     // Return to view mode
@@ -898,29 +919,34 @@ async function captureFromCamera() {
         
         console.log('Source region:', sourceX, sourceY, sourceWidth, 'x', sourceHeight);
 
-        // Step 4: Create canvas matching visible dimensions
-        console.log('Creating canvas with visible dimensions...');
+        // Step 4: Create canvas at 2x pixel ratio for high quality
+        console.log('Creating high-resolution canvas...');
+        const pixelRatio = 2; // 2x resolution for high quality
         const canvas = document.createElement('canvas');
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
+        canvas.width = displayWidth * pixelRatio;
+        canvas.height = displayHeight * pixelRatio;
         console.log('Canvas size:', canvas.width, 'x', canvas.height);
 
         // Step 5: Draw visible portion to canvas
-        const context = canvas.getContext('2d');
+        const context = canvas.getContext('2d', { alpha: false });
         if (!context) {
             throw new Error('Could not get 2D canvas context');
         }
 
-        // Draw only the visible portion of the video
+        // Enable high-quality rendering
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+
+        // Draw only the visible portion of the video at scaled resolution
         context.drawImage(
             videoElement,
             sourceX, sourceY, sourceWidth, sourceHeight,
-            0, 0, displayWidth, displayHeight
+            0, 0, displayWidth * pixelRatio, displayHeight * pixelRatio
         );
-        console.log('✓ Visible frame drawn to canvas');
+        console.log('✓ Visible frame drawn to canvas at high resolution');
 
-        // Step 6: Convert to image data
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        // Step 6: Convert to image data with maximum quality
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.98);
         console.log('Image data URL length:', imageDataUrl.length);
         
         if (!imageDataUrl || imageDataUrl.length < 100) {
