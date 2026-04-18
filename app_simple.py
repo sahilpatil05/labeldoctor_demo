@@ -1,6 +1,6 @@
 """
 Simplified Label Doctor App - Demo Version
-With OCR support for real image processing
+With optional OCR support for real image processing
 Perfect for Hugging Face Spaces deployment
 """
 
@@ -11,8 +11,19 @@ import json
 import os
 import base64
 import io
-from PIL import Image
-import pytesseract
+
+# Optional OCR support - graceful fallback if not available
+try:
+    from PIL import Image
+    PILLOW_AVAILABLE = True
+except ImportError:
+    PILLOW_AVAILABLE = False
+
+try:
+    import pytesseract
+    TESSERACT_AVAILABLE = True
+except ImportError:
+    TESSERACT_AVAILABLE = False
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = 'labeldoctor_demo_2026'
@@ -179,7 +190,7 @@ def analyze_ingredients():
 
 @app.route('/api/scan', methods=['POST'])
 def scan_image():
-    """Scan image for ingredients using OCR"""
+    """Scan image for ingredients using OCR (with fallback)"""
     try:
         data = request.json
         if not data:
@@ -190,6 +201,14 @@ def scan_image():
         
         if not image_data:
             return jsonify({'success': False, 'error': 'No image provided'}), 400
+        
+        # If OCR is not available, return helpful message
+        if not TESSERACT_AVAILABLE or not PILLOW_AVAILABLE:
+            return jsonify({
+                'success': False,
+                'error': 'OCR not available on this server. Please use the "Manually enter ingredients" option instead.',
+                'ocr_available': False
+            }), 400
         
         # Decode base64 image
         try:
