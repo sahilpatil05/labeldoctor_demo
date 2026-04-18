@@ -11,6 +11,7 @@ gunicorn==25.3.0
 
 # Image Processing (lightweight)
 Pillow==12.2.0
+opencv-python==4.13.0.92
 
 # Database
 SQLAlchemy==2.0.48
