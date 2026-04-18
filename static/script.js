@@ -1,4 +1,17 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// Determine API base URL based on current location
+const API_BASE_URL = (() => {
+    const host = window.location.hostname;
+    const port = window.location.port;
+    const protocol = window.location.protocol;
+    
+    if (host === 'localhost' || host === '127.0.0.1') {
+        // Local development
+        return 'http://localhost:5000/api';
+    } else {
+        // HF Spaces or other deployment - use current domain
+        return `${protocol}//${host}${port ? ':' + port : ''}/api`;
+    }
+})();
 
 // ============ STATE MANAGEMENT ============
 const state = {
