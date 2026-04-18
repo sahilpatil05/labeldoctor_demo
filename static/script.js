@@ -1,4 +1,7 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+// Determine API base URL based on current location
+const API_BASE_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api'
+    : `${window.location.protocol}//${window.location.host}/api`;
 
 // ============ STATE MANAGEMENT ============
 const state = {

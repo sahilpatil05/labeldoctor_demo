@@ -4,16 +4,21 @@ No heavy dependencies (no OpenCV, no EasyOCR)
 Perfect for Hugging Face Spaces deployment
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
 from datetime import datetime
 import json
 import os
+import hashlib
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = 'labeldoctor_demo_2026'
 
 CORS(app, supports_credentials=True)
+
+# ============ USER STORAGE (in-memory for demo) ============
+USERS_DB = {}  # Format: {email: {name, password_hash, allergens, dietary_preferences}}
+SESSIONS = {}  # Format: {session_id: {user_id, email, name}}
 
 # ============ DEMO DATA ============
 
@@ -55,6 +60,28 @@ DEMO_PRODUCTS = {
 }
 
 # ============ HELPER FUNCTIONS ============
+
+def hash_password(password):
+    """Hash password using SHA256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, password_hash):
+    """Verify password against hash"""
+    return hash_password(password) == password_hash
+
+def get_current_user():
+    """Get currently logged-in user from session"""
+    user_id = session.get('user_id')
+    if user_id and user_id in USERS_DB:
+        user_data = USERS_DB[user_id]
+        return {
+            'user_id': user_id,
+            'name': user_data.get('name'),
+            'email': user_id,  # Using email as user_id
+            'allergens': user_data.get('allergens', []),
+            'dietary_preferences': user_data.get('dietary_preferences', {})
+        }
+    return None
 
 def extract_ingredients(text):
     """Extract ingredients from text by splitting on commas/semicolons"""
@@ -119,13 +146,195 @@ def health_check():
         'timestamp': datetime.utcnow().isoformat()
     })
 
-@app.route('/api/allergens', methods=['GET'])
-def get_allergens():
-    """Get all available allergens"""
-    return jsonify({
-        'success': True,
-        'allergens': list(ALLERGEN_DATABASE.keys())
-    })
+# ============ AUTHENTICATION ROUTES ============
+
+@app.route('/api/auth/register', methods=['POST'])
+def register():
+    """Register a new user"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        confirm_password = data.get('confirm_password', '')
+        
+        # Validation
+        if not name or not email or not password:
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+        
+        if password != confirm_password:
+            return jsonify({'success': False, 'error': 'Passwords do not match'}), 400
+        
+        if len(password) < 6:
+            return jsonify({'success': False, 'error': 'Password must be at least 6 characters'}), 400
+        
+        if email in USERS_DB:
+            return jsonify({'success': False, 'error': 'Email already registered'}), 400
+        
+        # Register user
+        USERS_DB[email] = {
+            'name': name,
+            'password_hash': hash_password(password),
+            'allergens': [],
+            'dietary_preferences': {},
+            'created_at': datetime.utcnow().isoformat()
+        }
+        
+        # Create session
+        session['user_id'] = email
+        
+        return jsonify({
+            'success': True,
+            'message': 'Registration successful',
+            'user_id': email,
+            'name': name,
+            'email': email
+        })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/login', methods=['POST'])
+def login():
+    """Login user"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        
+        if not email or not password:
+            return jsonify({'success': False, 'error': 'Missing email or password'}), 400
+        
+        if email not in USERS_DB:
+            return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
+        
+        user_data = USERS_DB[email]
+        if not verify_password(password, user_data['password_hash']):
+            return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
+        
+        # Create session
+        session['user_id'] = email
+        
+        return jsonify({
+            'success': True,
+            'message': 'Login successful',
+            'user_id': email,
+            'name': user_data['name'],
+            'email': email,
+            'allergens': user_data.get('allergens', []),
+            'dietary_preferences': user_data.get('dietary_preferences', {})
+        })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    """Logout user"""
+    try:
+        session.pop('user_id', None)
+        return jsonify({'success': True, 'message': 'Logged out successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/auth/current-user', methods=['GET'])
+def current_user():
+    """Get current logged-in user"""
+    try:
+        user = get_current_user()
+        if user:
+            return jsonify({'success': True, **user})
+        else:
+            return jsonify({'success': False, 'error': 'Not logged in'}), 401
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/user/<user_id>', methods=['GET', 'POST'])
+def user_profile(user_id):
+    """Get or update user profile"""
+    try:
+        current = get_current_user()
+        if not current or current['user_id'] != user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        if request.method == 'POST':
+            # Update user profile
+            data = request.json
+            if not data:
+                return jsonify({'success': False, 'error': 'No data provided'}), 400
+            
+            user_data = USERS_DB[user_id]
+            if 'allergens' in data:
+                user_data['allergens'] = data['allergens']
+            if 'dietary_preferences' in data:
+                user_data['dietary_preferences'] = data['dietary_preferences']
+            
+            return jsonify({
+                'success': True,
+                'message': 'Profile updated',
+                'allergens': user_data.get('allergens', []),
+                'dietary_preferences': user_data.get('dietary_preferences', {})
+            })
+        else:
+            # Get user profile
+            user_data = USERS_DB[user_id]
+            return jsonify({
+                'success': True,
+                'user_id': user_id,
+                'name': user_data['name'],
+                'email': user_id,
+                'allergens': user_data.get('allergens', []),
+                'dietary_preferences': user_data.get('dietary_preferences', {})
+            })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/insights/<user_id>', methods=['GET', 'POST'])
+def user_insights(user_id):
+    """Get or save user scan insights"""
+    try:
+        current = get_current_user()
+        if not current or current['user_id'] != user_id:
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+        
+        if request.method == 'POST':
+            # Save scan result
+            data = request.json
+            user_data = USERS_DB[user_id]
+            if 'scan_history' not in user_data:
+                user_data['scan_history'] = []
+            user_data['scan_history'].append({
+                'timestamp': datetime.utcnow().isoformat(),
+                'result': data
+            })
+            return jsonify({'success': True, 'message': 'Scan saved'})
+        else:
+            # Get insights
+            user_data = USERS_DB[user_id]
+            scan_history = user_data.get('scan_history', [])
+            total_scans = len(scan_history)
+            avg_health_score = 0
+            
+            if scan_history:
+                health_scores = [s['result'].get('health_score', 50) for s in scan_history]
+                avg_health_score = sum(health_scores) / len(health_scores)
+            
+            return jsonify({
+                'success': True,
+                'total_scans': total_scans,
+                'avg_health_score': round(avg_health_score, 1),
+                'scan_history': scan_history[-5:]  # Last 5 scans
+            })
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_ingredients():
