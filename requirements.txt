@@ -1,5 +1,7 @@
 # Label Doctor - Lightweight Demo Version
-# Minimal dependencies: Flask only (no ML/OCR/image processing)
+# Minimal dependencies with OCR support
 
 Flask==2.3.3
 Flask-CORS==4.0.0
+Pillow==10.0.0
+pytesseract==0.3.10

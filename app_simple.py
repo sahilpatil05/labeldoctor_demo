@@ -1,6 +1,6 @@
 """
 Simplified Label Doctor App - Demo Version
-No heavy dependencies (no OpenCV, no EasyOCR)
+With OCR support for real image processing
 Perfect for Hugging Face Spaces deployment
 """
 
@@ -9,6 +9,10 @@ from flask_cors import CORS
 from datetime import datetime
 import json
 import os
+import base64
+import io
+from PIL import Image
+import pytesseract
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = 'labeldoctor_demo_2026'
@@ -175,7 +179,7 @@ def analyze_ingredients():
 
 @app.route('/api/scan', methods=['POST'])
 def scan_image():
-    """Scan image for ingredients (OCR simulation)"""
+    """Scan image for ingredients using OCR"""
     try:
         data = request.json
         if not data:
@@ -187,44 +191,78 @@ def scan_image():
         if not image_data:
             return jsonify({'success': False, 'error': 'No image provided'}), 400
         
-        # Demo mode: return sample ingredients based on image size
-        # In production, this would use OCR to extract real text from image
-        sample_ingredients = [
-            'wheat flour', 'sugar', 'butter', 'eggs', 'milk', 
-            'chocolate chips', 'vanilla extract', 'salt', 'baking soda'
-        ]
+        # Decode base64 image
+        try:
+            # Remove data URI prefix if present
+            if ',' in image_data:
+                image_data = image_data.split(',')[1]
+            
+            image_bytes = base64.b64decode(image_data)
+            image = Image.open(io.BytesIO(image_bytes))
+            
+            # Optimize image for OCR
+            # Resize to larger size for better OCR accuracy
+            width, height = image.size
+            if width < 800:
+                scale = 800 / width
+                new_width = 800
+                new_height = int(height * scale)
+                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # Extract text using Tesseract OCR
+            extracted_text = pytesseract.image_to_string(image)
+            
+            if not extracted_text or extracted_text.strip() == '':
+                return jsonify({
+                    'success': False,
+                    'error': 'No text detected in image. Please use a clearer image of a food label.'
+                }), 400
+            
+            # Extract ingredients from the OCR text
+            ingredients = extract_ingredients(extracted_text)
+            
+            if not ingredients:
+                return jsonify({
+                    'success': False,
+                    'error': 'Could not parse ingredients from image. Please ensure the label is clearly visible.'
+                }), 400
+            
+            # Analyze the extracted ingredients
+            warnings, safe_ingredients = detect_allergens(ingredients, user_allergens)
+            
+            # Calculate health score
+            allergen_count = len(warnings)
+            if allergen_count > 2:
+                health_score = 30
+                safety_status = 'unsafe'
+            elif allergen_count > 0:
+                health_score = 50
+                safety_status = 'medium'
+            else:
+                health_score = 75
+                safety_status = 'safe'
+            
+            return jsonify({
+                'success': True,
+                'extracted_text': extracted_text[:500],  # First 500 chars of OCR output
+                'extracted_ingredients': ingredients,
+                'total_ingredients': len(ingredients),
+                'warnings': warnings,
+                'allergen_count': len(warnings),
+                'safe_ingredients': safe_ingredients,
+                'safe_count': len(safe_ingredients),
+                'health_score': health_score,
+                'safety_status': safety_status,
+                'product_name': 'Scanned Product',
+                'message': f"Successfully extracted {len(ingredients)} ingredient(s). Found {len(warnings)} allergen(s)."
+            })
         
-        # Analyze the ingredients
-        warnings, safe_ingredients = detect_allergens(sample_ingredients, user_allergens)
-        
-        # Calculate health score
-        allergen_count = len(warnings)
-        if allergen_count > 2:
-            health_score = 30
-            safety_status = 'unsafe'
-        elif allergen_count == 1:
-            health_score = 50
-            safety_status = 'medium'
-        else:
-            health_score = 75
-            safety_status = 'safe'
-        
-        return jsonify({
-            'success': True,
-            'extracted_ingredients': sample_ingredients,
-            'total_ingredients': len(sample_ingredients),
-            'warnings': warnings,
-            'allergen_count': len(warnings),
-            'safe_ingredients': safe_ingredients,
-            'safe_count': len(safe_ingredients),
-            'health_score': health_score,
-            'safety_status': safety_status,
-            'product_name': 'Scanned Product',
-            'message': f"Found {len(warnings)} allergen(s)" if warnings else "No allergens detected"
-        })
+        except (ValueError, OSError) as e:
+            return jsonify({'success': False, 'error': f'Invalid image format: {str(e)}'}), 400
     
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f'Scan error: {str(e)}')
+        return jsonify({'success': False, 'error': f'Error processing image: {str(e)}'}), 500
 
 @app.route('/api/demo/scan', methods=['GET'])
 def demo_scan():
