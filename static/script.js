@@ -843,6 +843,58 @@ async function scanImage() {
     }
 }
 
+// ============ DEMO MODE ============
+async function loadDemoScan() {
+    console.log('Loading demo scan...');
+    showLoading(true);
+    
+    try {
+        // Show a processing message
+        showToast('Loading demo scan (simulating realistic processing delays)...', 'info');
+        
+        // Call the demo endpoint
+        const response = await fetch(`${API_BASE_URL}/demo/scan`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            console.log('Demo scan loaded:', data);
+            
+            // Store the demo results in state
+            state.extractedText = data.extracted_ingredients || [];
+            state.analysisResults = data;
+            
+            // Update user allergens if different from demo user
+            if (data.demo_user_allergens) {
+                state.userProfile.allergens = data.demo_user_allergens;
+            }
+            
+            // Display results
+            displayExtractedText(state.extractedText);
+            displayResults(data);
+            showResults();
+            
+            // Show success message with demo info
+            showToast(`✓ Demo scan complete! Allergens detected: ${data.allergen_count}. Processing time: ${data.processing_time}`, 'success');
+            
+            // Scroll to results
+            setTimeout(() => {
+                document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+            }, 500);
+        } else {
+            showToast('Error: ' + (data.error || 'Failed to load demo'), 'error');
+        }
+    } catch (error) {
+        console.error('Demo scan error:', error);
+        showToast('Failed to load demo: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
 function displayExtractedText(ingredients) {
     const container = document.getElementById('extractedText');
     if (ingredients.length === 0) {

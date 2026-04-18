@@ -16,6 +16,10 @@ from datetime import datetime
 from functools import wraps
 import ssl
 import urllib.request
+import traceback
+import re
+import sys
+import warnings
 
 # ========== FIX PILLOW COMPATIBILITY ==========
 # Handle Pillow 10.0+ deprecation of Image.ANTIALIAS
@@ -617,6 +621,12 @@ class Product(db.Model):
 # ============ DATABASE INITIALIZATION ============
 with app.app_context():
     db.create_all()
+    # Initialize demo user for mobile showcase
+    try:
+        demo_user = initialize_demo_user()
+        print(f"✓ Demo user initialized: {demo_user.email}")
+    except Exception as e:
+        print(f"⚠ Warning: Could not initialize demo user: {e}")
 
 # Load allergens and alternatives
 def load_data():
@@ -1316,6 +1326,85 @@ def index():
     """Serve the main page"""
     return render_template('index.html')
 
+# ============ DEMO MODE DATA ============
+# Demo scenarios for mobile showcase
+
+DEMO_DATA = {
+    'scan_results': {
+        'extracted_text': 'INGREDIENTS: Wheat flour, sugar, palm oil, eggs, milk powder, vanilla extract, salt, baking soda, soy lecithin. CONTAINS: WHEAT, EGGS, MILK, SOY. MAY CONTAIN: TREE NUTS.',
+        'extracted_ingredients': [
+            'wheat flour',
+            'sugar',
+            'palm oil',
+            'eggs',
+            'milk powder',
+            'vanilla extract',
+            'salt',
+            'baking soda',
+            'soy lecithin'
+        ],
+        'warnings': [
+            {
+                'allergen': 'wheat',
+                'ingredient': 'wheat flour',
+                'severity': 'high',
+                'description': 'Contains gluten',
+                'entity_type': 'ALLERGEN'
+            },
+            {
+                'allergen': 'milk',
+                'ingredient': 'milk powder',
+                'severity': 'high',
+                'description': 'Dairy allergen',
+                'entity_type': 'ALLERGEN'
+            },
+            {
+                'allergen': 'eggs',
+                'ingredient': 'eggs',
+                'severity': 'high',
+                'description': 'Contains eggs',
+                'entity_type': 'ALLERGEN'
+            },
+            {
+                'allergen': 'soy',
+                'ingredient': 'soy lecithin',
+                'severity': 'medium',
+                'description': 'Soy-based ingredient',
+                'entity_type': 'ALLERGEN'
+            }
+        ],
+        'safe_ingredients': ['sugar', 'palm oil', 'vanilla extract', 'salt', 'baking soda'],
+        'health_score': 45,
+        'safety_status': 'unsafe',
+        'food_category': 'Snack'
+    },
+    'demo_user': {
+        'name': 'Demo User',
+        'email': 'demo@labeldoctor.com',
+        'allergens': ['wheat', 'milk', 'eggs'],
+        'dietary_preferences': {'vegetarian': False, 'vegan': False, 'gluten_free': True}
+    }
+}
+
+def initialize_demo_user():
+    """Create or get demo user with pre-set allergens"""
+    demo_email = DEMO_DATA['demo_user']['email']
+    demo_user = User.query.filter_by(email=demo_email).first()
+    
+    if not demo_user:
+        demo_user = User(
+            name=DEMO_DATA['demo_user']['name'],
+            email=demo_email,
+            allergens=DEMO_DATA['demo_user']['allergens'],
+            dietary_preferences=DEMO_DATA['demo_user']['dietary_preferences']
+        )
+        demo_user.set_password('demo123')  # Demo password
+        db.session.add(demo_user)
+        db.session.commit()
+        print(f"✓ Demo user created: {demo_email}")
+    
+    return demo_user
+
 # ============ HEALTH CHECK ============
 
 @app.route('/api/health', methods=['GET'])
@@ -1351,6 +1440,141 @@ def health_check():
         'status': ocr_status,
         'ocr_message': ocr_message,
         'timestamp': datetime.utcnow().isoformat()
+    })
+
+# ============ DEMO MODE ENDPOINTS ============
+
+@app.route('/api/demo/scan', methods=['GET'])
+def demo_scan():
+    """Demo endpoint that simulates realistic OCR processing with delays"""
+    import time
+    
+    try:
+        # Simulate OCR processing delay (1-2 seconds)
+        print("[DEMO] Starting demo scan simulation...")
+        time.sleep(1.2)
+        
+        # Get demo results
+        demo_results = DEMO_DATA['scan_results'].copy()
+        
+        # Get or create demo user
+        demo_user = initialize_demo_user()
+        
+        # Simulate ingredient extraction delay (0.5 seconds)
+        time.sleep(0.5)
+        print("[DEMO] Simulated OCR text extraction complete")
+        
+        # Simulate allergen detection delay (0.8 seconds)
+        time.sleep(0.8)
+        print("[DEMO] Simulated allergen detection complete")
+        
+        # Simulate recommendations generation delay (0.5 seconds)
+        time.sleep(0.5)
+        print("[DEMO] Simulated recommendations generation complete")
+        
+        # Generate recommendations based on demo user allergens
+        user_allergens = demo_user.allergens
+        recommendations = get_category_based_alternatives(
+            demo_results['extracted_ingredients'],
+            user_allergens,
+            food_category=demo_results['food_category'],
+            current_health_score=demo_results['health_score']
+        )
+        
+        # Calculate insights
+        insights = calculate_insights(
+            demo_results['extracted_ingredients'],
+            demo_results['warnings']
+        )
+        
+        # Build response with all demo data
+        response = {
+            'success': True,
+            'demo_mode': True,
+            'demo_user_id': demo_user.id,
+            'demo_user_allergens': user_allergens,
+            'extracted_ingredients': demo_results['extracted_ingredients'],
+            'total_ingredients': len(demo_results['extracted_ingredients']),
+            'warnings': demo_results['warnings'],
+            'safe_ingredients': demo_results['safe_ingredients'],
+            'safe_count': len(demo_results['safe_ingredients']),
+            'allergen_count': len(demo_results['warnings']),
+            'health_score': demo_results['health_score'],
+            'safety_status': demo_results['safety_status'],
+            'food_category': demo_results['food_category'],
+            'alternatives': [
+                {
+                    'name': 'Gluten-Free Cookies',
+                    'brand': 'Nature\'s Path',
+                    'category': 'Snack',
+                    'allergen_free': True,
+                    'rating': 4.7,
+                    'health_score': 72,
+                    'reason': 'Safe alternative without wheat'
+                },
+                {
+                    'name': 'Coconut Flour Biscuits',
+                    'brand': 'Enjoy Life',
+                    'category': 'Snack',
+                    'allergen_free': True,
+                    'rating': 4.5,
+                    'health_score': 75,
+                    'reason': 'Safe alternative without milk and eggs'
+                }
+            ],
+            'recommendations': recommendations[:5] if recommendations else [],
+            'insights': insights,
+            'confidence': 0.92,
+            'processing_time': '2.5s (simulated)',
+            'message': f'Demo scan complete! Found {len(demo_results["warnings"])} potential allergens based on your selection.'
+        }
+        
+        print("[DEMO] Demo scan response generated successfully")
+        return jsonify(response)
+        
+    except Exception as e:
+        print(f"[DEMO] Error in demo scan: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': f'Demo scan failed: {str(e)}'
+        }), 500
+
+@app.route('/api/demo/user', methods=['GET'])
+def get_demo_user():
+    """Get demo user information"""
+    try:
+        demo_user = initialize_demo_user()
+        return jsonify({
+            'success': True,
+            'user_id': demo_user.id,
+            'name': demo_user.name,
+            'email': demo_user.email,
+            'allergens': demo_user.allergens,
+            'dietary_preferences': demo_user.dietary_preferences,
+            'message': 'Demo user ready for testing'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Failed to get demo user: {str(e)}'
+        }), 500
+
+@app.route('/api/demo/info', methods=['GET'])
+def demo_info():
+    """Get demo mode information"""
+    return jsonify({
+        'success': True,
+        'demo_enabled': True,
+        'features': {
+            'realistic_processing': 'Simulates OCR with 1-2 second delay',
+            'allergen_detection': 'Demonstrates allergen finding (wheat, milk, eggs, soy)',
+            'product_recommendations': 'Shows safe alternative products',
+            'health_scoring': 'Calculates health score based on allergens'
+        },
+        'demo_allergens': DEMO_DATA['demo_user']['allergens'],
+        'demo_ingredients': DEMO_DATA['scan_results']['extracted_ingredients'][:5],
+        'message': 'Click "Load Demo Scan" button to start the demo'
     })
 
 @app.route('/api/extract-ingredients-from-text', methods=['POST'])

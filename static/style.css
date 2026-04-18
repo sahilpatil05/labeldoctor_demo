@@ -1801,6 +1801,31 @@ body {
     transform: scaleX(1);
 }
 
+.demo-btn {
+    background: linear-gradient(135deg, #F59E0B, #D97706) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px;
+    padding: 10px 16px !important;
+    margin-left: auto;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.5px;
+}
+
+.demo-btn:hover {
+    background: linear-gradient(135deg, #D97706, #B45309) !important;
+    color: white !important;
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+    transform: translateY(-2px);
+}
+
+.demo-btn:active {
+    transform: translateY(0);
+}
+
 .tab-content {
     display: none;
 }
