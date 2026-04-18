@@ -4,10 +4,13 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
-# Copy requirements
-COPY requirements.txt .
+# Copy apt requirements and requirements
+COPY apt.txt requirements.txt .
 
-# Install dependencies (no cache to reduce image size)
+# Install system dependencies first
+RUN apt-get update && apt-get install -y --no-install-recommends $(cat apt.txt) && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies (no cache to reduce image size)
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy all application files
