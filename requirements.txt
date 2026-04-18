@@ -1,5 +1,5 @@
 # Minimal production requirements for Label Doctor Ingredient Scanner
-# Render deployment - production-ready versions
+# Render deployment - wheels only for fast installation
 
 # Web Framework
 Flask==2.3.3
@@ -8,10 +8,8 @@ Flask-SQLAlchemy==3.1.1
 Werkzeug==2.3.7
 gunicorn==25.3.0
 
-# OCR
+# OCR (easyocr includes torch)
 easyocr==1.7.2
-torch==2.11.0
-torchvision==0.26.0
 
 # NLP/Entity Recognition
 spacy==3.8.11
