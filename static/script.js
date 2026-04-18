@@ -679,23 +679,57 @@ async function captureFromCamera() {
             throw new Error('Video stream has no dimensions. Camera may not be active.');
         }
 
-        // Step 3: Create canvas
-        console.log('Creating canvas...');
+        // Step 3: Calculate visible portion (accounting for object-fit: cover crop)
+        const displayWidth = videoElement.clientWidth;
+        const displayHeight = videoElement.clientHeight;
+        const displayAspect = displayWidth / displayHeight;
+        const videoAspect = videoElement.videoWidth / videoElement.videoHeight;
+        
+        console.log('Display size:', displayWidth, 'x', displayHeight, 'aspect:', displayAspect.toFixed(2));
+        console.log('Video aspect:', videoAspect.toFixed(2));
+        
+        let sourceX, sourceY, sourceWidth, sourceHeight;
+        
+        if (videoAspect > displayAspect) {
+            // Video is wider than display - crop from left/right
+            sourceHeight = videoElement.videoHeight;
+            sourceWidth = sourceHeight * displayAspect;
+            sourceX = (videoElement.videoWidth - sourceWidth) / 2;
+            sourceY = 0;
+            console.log('Cropping left/right');
+        } else {
+            // Video is taller than display - crop from top/bottom
+            sourceWidth = videoElement.videoWidth;
+            sourceHeight = sourceWidth / displayAspect;
+            sourceX = 0;
+            sourceY = (videoElement.videoHeight - sourceHeight) / 2;
+            console.log('Cropping top/bottom');
+        }
+        
+        console.log('Source region:', sourceX, sourceY, sourceWidth, 'x', sourceHeight);
+
+        // Step 4: Create canvas matching visible dimensions
+        console.log('Creating canvas with visible dimensions...');
         const canvas = document.createElement('canvas');
-        canvas.width = videoElement.videoWidth;
-        canvas.height = videoElement.videoHeight;
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
         console.log('Canvas size:', canvas.width, 'x', canvas.height);
 
-        // Step 4: Draw frame
+        // Step 5: Draw visible portion to canvas
         const context = canvas.getContext('2d');
         if (!context) {
             throw new Error('Could not get 2D canvas context');
         }
 
-        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-        console.log('✓ Frame drawn to canvas');
+        // Draw only the visible portion of the video
+        context.drawImage(
+            videoElement,
+            sourceX, sourceY, sourceWidth, sourceHeight,
+            0, 0, displayWidth, displayHeight
+        );
+        console.log('✓ Visible frame drawn to canvas');
 
-        // Step 5: Convert to image data
+        // Step 6: Convert to image data
         const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
         console.log('Image data URL length:', imageDataUrl.length);
         
