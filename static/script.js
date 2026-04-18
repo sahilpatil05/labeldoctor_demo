@@ -803,8 +803,8 @@ async function scanImage() {
         const foodCategoryEl = document.getElementById('foodCategory');
         const foodCategory = (foodCategoryEl && foodCategoryEl.value) ? foodCategoryEl.value : '';
         
-        // Enable image preprocessing for better OCR extraction
-        const usePreprocessing = true;
+        // Use raw OCR mode with aggressive noise filtering (no preprocessing)
+        const usePreprocessing = false;
 
         // Unified endpoint - send image with user allergens and food category
         const response = await fetch(`${API_BASE_URL}/scan`, {
