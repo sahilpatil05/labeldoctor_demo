@@ -4,9 +4,6 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
-# Copy requirements
-COPY requirements.txt .
-
 # Install only essential packages (Flask + CORS)
 RUN pip install --no-cache-dir Flask flask-cors
 

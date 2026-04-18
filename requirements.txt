@@ -1,24 +1,5 @@
-# Mobile Demo Deployment - Label Doctor Ingredient Scanner
-# Minimal dependencies for demo mode (no ML libs - simulates OCR)
-# All packages pre-built wheels for fast Render deployment
+# Label Doctor - Lightweight Demo Version
+# Minimal dependencies: Flask only (no ML/OCR/image processing)
 
-# Web Framework
 Flask==2.3.3
 Flask-CORS==4.0.0
-Flask-SQLAlchemy==3.1.1
-Werkzeug==2.3.7
-gunicorn==25.3.0
-
-# Image Processing (lightweight)
-Pillow==12.2.0
-opencv-python==4.13.0.92
-
-# Database
-SQLAlchemy==2.0.48
-
-# Utilities & Security
-PyYAML==6.0.3
-requests==2.32.5
-bcrypt==4.3.0
-python-bidi==0.4.2
-
