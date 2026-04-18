@@ -1,4 +1,4 @@
-# Use Python 3.12 slim image (lightweight demo version)
+# Use Python 3.12 slim image
 FROM python:3.12-slim
 
 # Set working directory
@@ -7,7 +7,7 @@ WORKDIR /app
 # Copy requirements
 COPY requirements.txt .
 
-# Install only essential packages (Flask + CORS)
+# Install only essential packages (minimal)
 RUN pip install --no-cache-dir Flask flask-cors
 
 # Copy application files
@@ -19,5 +19,5 @@ RUN mkdir -p /app/instance
 # Expose port 7860
 EXPOSE 7860
 
-# Run the simple Flask app (demo version - no heavy dependencies)
+# Run the simple Flask app
 CMD ["python", "app_simple.py"]
