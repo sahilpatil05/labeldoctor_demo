@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 libxcb1
 libx11-6
 libxext6
 libsm6
 libxrender1
+=======
+libxcb1
+>>>>>>> 6e49b8c4f02f246b1e824a9bbade183a7121b7f7
