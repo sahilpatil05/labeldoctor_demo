@@ -1,7 +1,4 @@
-// Determine API base URL based on current location
-const API_BASE_URL = window.location.hostname === 'localhost' 
-    ? 'http://localhost:5000/api'
-    : `${window.location.protocol}//${window.location.host}/api`;
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // ============ STATE MANAGEMENT ============
 const state = {
@@ -24,59 +21,22 @@ const state = {
 
 // ============ INITIALIZATION ============
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOMContentLoaded: Starting checkAuthStatus...');
+    console.log('DOMContentLoaded: App loaded, showing main app directly (auth disabled)');
     
-    // Attach form submit listeners immediately
-    const loginFormElement = document.querySelector('form:has(#loginEmail)');
-    const registerFormElement = document.querySelector('form:has(#registerEmail)');
+    // Skip authentication - show main app directly
+    state.userId = 'demo-user';
+    state.userName = 'Demo User';
+    state.userEmail = 'demo@labeldoctor.com';
+    state.userProfile.allergens = ['wheat', 'milk', 'eggs'];
     
-    if (loginFormElement) {
-        console.log('DOMContentLoaded: Attaching login form listener');
-        loginFormElement.addEventListener('submit', handleLogin);
-    } else {
-        console.warn('DOMContentLoaded: Login form not found');
-    }
-    
-    if (registerFormElement) {
-        console.log('DOMContentLoaded: Attaching register form listener');
-        registerFormElement.addEventListener('submit', handleRegister);
-    } else {
-        console.warn('DOMContentLoaded: Register form not found');
-    }
-    
-    checkAuthStatus();
+    showMainApp();
 });
 
 // ============ AUTHENTICATION ============
+// Auth disabled - app shows main interface directly
 async function checkAuthStatus() {
-    console.log('checkAuthStatus: Starting...');
-    try {
-        console.log('checkAuthStatus: Fetching current-user from', `${API_BASE_URL}/auth/current-user`);
-        const response = await fetch(`${API_BASE_URL}/auth/current-user`, {
-            credentials: 'include'
-        });
-        console.log('checkAuthStatus: Response status:', response.status);
-        const data = await response.json();
-        console.log('checkAuthStatus: Response data:', data);
-        
-        if (data.success) {
-            // User is logged in
-            console.log('checkAuthStatus: User is logged in, showing main app');
-            state.userId = data.user_id;
-            state.userName = data.name;
-            state.userEmail = data.email;
-            state.userProfile.allergens = data.allergens;
-            state.userProfile.dietary = data.dietary_preferences;
-            showMainApp();
-        } else {
-            // User is not logged in
-            console.log('checkAuthStatus: User is not logged in, showing auth forms');
-            showAuthForms();
-        }
-    } catch (error) {
-        console.log('checkAuthStatus: Caught error:', error);
-        showAuthForms();
-    }
+    console.log('checkAuthStatus: Auth disabled, showing main app');
+    showMainApp();
 }
 
 function showAuthForms() {
@@ -280,17 +240,8 @@ async function handleRegister(e) {
 }
 
 async function handleLogout() {
-    try {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            credentials: 'include'
-        });
-        state.userId = null;
-        state.userName = null;
-        checkAuthStatus();
-    } catch (error) {
-        console.error('Logout failed:', error);
-    }
+    // Auth disabled - just reload page
+    location.reload();
 }
 
 function showErrorMessage(elementId, message) {
