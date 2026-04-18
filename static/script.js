@@ -391,6 +391,196 @@ function clearImage() {
     if (extractedText) extractedText.innerHTML = '<p class="placeholder">Image will appear here after scanning</p>';
 }
 
+// ============ IMAGE CROP & EDIT ============
+let cropState = {
+    rotation: 0,
+    cropBox: { x: 0, y: 0, width: 0, height: 0 },
+    isDragging: false,
+    dragHandle: null
+};
+
+function startEditImage() {
+    const previewImage = document.getElementById('previewImage');
+    const cropMode = document.getElementById('cropMode');
+    const viewMode = document.getElementById('viewMode');
+    const cropCanvas = document.getElementById('cropCanvas');
+    
+    if (!previewImage || !previewImage.src) return;
+    
+    // Hide view mode, show crop mode
+    if (viewMode) viewMode.classList.add('hidden');
+    if (cropMode) cropMode.classList.remove('hidden');
+    
+    // Load image and draw to canvas
+    const img = new Image();
+    img.onload = function() {
+        cropCanvas.width = img.width;
+        cropCanvas.height = img.height;
+        const ctx = cropCanvas.getContext('2d');
+        
+        // Apply rotation if any
+        if (cropState.rotation !== 0) {
+            ctx.translate(img.width / 2, img.height / 2);
+            ctx.rotate((cropState.rotation * Math.PI) / 180);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        } else {
+            ctx.drawImage(img, 0, 0);
+        }
+        
+        // Initialize crop box (80% of image)
+        cropState.cropBox = {
+            x: img.width * 0.1,
+            y: img.height * 0.1,
+            width: img.width * 0.8,
+            height: img.height * 0.8
+        };
+        
+        drawCropBox();
+        setupCropHandlers();
+    };
+    img.src = previewImage.src;
+}
+
+function drawCropBox() {
+    const cropCanvas = document.getElementById('cropCanvas');
+    const canvas = document.getElementById('cropCanvas');
+    const img = new Image();
+    
+    img.onload = function() {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Redraw image with rotation
+        if (cropState.rotation !== 0) {
+            ctx.translate(img.width / 2, img.height / 2);
+            ctx.rotate((cropState.rotation * Math.PI) / 180);
+            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        } else {
+            ctx.drawImage(img, 0, 0);
+        }
+        
+        // Draw crop box
+        updateCropBoxVisual();
+    };
+    img.src = document.getElementById('previewImage').src;
+}
+
+function updateCropBoxVisual() {
+    const cropBox = document.querySelector('.crop-box');
+    if (!cropBox) return;
+    
+    const { x, y, width, height } = cropState.cropBox;
+    cropBox.style.left = x + 'px';
+    cropBox.style.top = y + 'px';
+    cropBox.style.width = width + 'px';
+    cropBox.style.height = height + 'px';
+}
+
+function setupCropHandlers() {
+    const cropCanvas = document.getElementById('cropCanvas');
+    const cropBox = document.querySelector('.crop-box');
+    
+    cropBox.addEventListener('mousedown', (e) => {
+        if (e.target.classList.contains('crop-handle')) {
+            cropState.isDragging = true;
+            cropState.dragHandle = e.target.classList[1]; // Get 'tl', 'tr', etc.
+        } else if (e.target === cropBox) {
+            cropState.isDragging = true;
+            cropState.dragHandle = 'move';
+        }
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!cropState.isDragging) return;
+        
+        const rect = cropCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        const minSize = 50;
+        const box = cropState.cropBox;
+        
+        switch (cropState.dragHandle) {
+            case 'move':
+                const offsetX = x - (box.x + box.width / 2);
+                const offsetY = y - (box.y + box.height / 2);
+                box.x = Math.max(0, Math.min(x - box.width / 2, cropCanvas.width - box.width));
+                box.y = Math.max(0, Math.min(y - box.height / 2, cropCanvas.height - box.height));
+                break;
+            case 'tl':
+                box.width = Math.max(minSize, box.x + box.width - x);
+                box.height = Math.max(minSize, box.y + box.height - y);
+                box.x = Math.min(x, box.x + box.width - minSize);
+                box.y = Math.min(y, box.y + box.height - minSize);
+                break;
+            case 'tr':
+                box.width = Math.max(minSize, x - box.x);
+                box.height = Math.max(minSize, box.y + box.height - y);
+                box.y = Math.min(y, box.y + box.height - minSize);
+                break;
+            case 'bl':
+                box.width = Math.max(minSize, box.x + box.width - x);
+                box.height = Math.max(minSize, y - box.y);
+                box.x = Math.min(x, box.x + box.width - minSize);
+                break;
+            case 'br':
+                box.width = Math.max(minSize, x - box.x);
+                box.height = Math.max(minSize, y - box.y);
+                break;
+        }
+        
+        updateCropBoxVisual();
+    });
+    
+    document.addEventListener('mouseup', () => {
+        cropState.isDragging = false;
+        cropState.dragHandle = null;
+    });
+}
+
+function rotateCrop() {
+    cropState.rotation = (cropState.rotation + 90) % 360;
+    drawCropBox();
+}
+
+function applyCrop() {
+    const canvas = document.getElementById('cropCanvas');
+    const previewImage = document.getElementById('previewImage');
+    const { x, y, width, height } = cropState.cropBox;
+    
+    // Create a temporary canvas for the cropped image
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+    
+    // Get the image data from the main canvas
+    const imageData = canvas.getContext('2d').getImageData(x, y, width, height);
+    tempCtx.putImageData(imageData, 0, 0);
+    
+    // Update the preview image
+    previewImage.src = tempCanvas.toDataURL('image/jpeg', 0.95);
+    state.currentImage = previewImage.src;
+    
+    // Return to view mode
+    const cropMode = document.getElementById('cropMode');
+    const viewMode = document.getElementById('viewMode');
+    if (cropMode) cropMode.classList.add('hidden');
+    if (viewMode) viewMode.classList.remove('hidden');
+    
+    // Reset crop state
+    cropState.rotation = 0;
+}
+
+function cancelCrop() {
+    const cropMode = document.getElementById('cropMode');
+    const viewMode = document.getElementById('viewMode');
+    if (cropMode) cropMode.classList.add('hidden');
+    if (viewMode) viewMode.classList.remove('hidden');
+    cropState.rotation = 0;
+}
+
 // ============ SCANNER TABS & CAMERA ============
 let cameraStream = null;
 let cameraActive = false;
